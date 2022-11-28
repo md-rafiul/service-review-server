@@ -1,5 +1,6 @@
 const express = require("express");
 const cors = require("cors");
+const jwt = require("jsonwebtoken");
 require("dotenv").config();
 const { MongoClient, ServerApiVersion, ObjectId } = require("mongodb");
 const app = express();
@@ -17,15 +18,42 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+function varifyJWT(req, res, next) {
+  const authHeader = req.headers.authorization;
+
+  console.log(authHeader);
+  if (!authHeader) {
+    res.status(401).send({ message: "unauthorize access" });
+  }
+  const token = authHeader.split(" ")[1];
+
+  console.log(token);
+  jwt.verify(token, process.env.JWT_TOKEN_SECRET, function (err, decoded) {
+    console.log("in vary: ", decoded);
+    if (err) {
+      res.status(403).send({ message: "forbidden access" });
+    }
+    req.decoded = decoded;
+    next();
+  });
+}
+
 async function run() {
   try {
     const serviceCollection = client
       .db("serviceReviewDB")
       .collection("services");
-    const userCollection = client.db("serviceReviewDB").collection("users");
     const feedbacksCollection = client
       .db("serviceReviewDB")
       .collection("feedbacks");
+
+    app.post("/jwt", (req, res) => {
+      const user = req.body;
+      const token = jwt.sign(user, process.env.JWT_TOKEN_SECRET, {
+        expiresIn: "10h",
+      });
+      res.send({ token });
+    });
 
     // home services
     app.get("/", async (req, res) => {
@@ -52,7 +80,15 @@ async function run() {
     });
 
     //feedbacks
-    app.get("/feedbacks", async (req, res) => {
+    app.get("/feedbacks", varifyJWT, async (req, res) => {
+      // console.log(req.url.split("=")[1]);
+      const email = req.headers.authorization.split(" ")[2];
+      const decoded = req.decoded;
+      console.log(decoded);
+      if (decoded.email !== (req.query.userEmail || email)) {
+        res.status(403).send({ message: "unauthorize access email" });
+      }
+
       let query = {};
       if (req.query.userEmail) {
         query = {
@@ -72,6 +108,14 @@ async function run() {
     app.post("/feedbacks", async (req, res) => {
       const order = req.body;
       const result = await feedbacksCollection.insertOne(order);
+      res.send(result);
+    });
+
+    app.delete("/feedbacks/:id", async (req, res) => {
+      const id = req.params.id;
+      console.log(id);
+      const query = { _id: ObjectId(id) };
+      const result = await feedbacksCollection.deleteOne(query);
       res.send(result);
     });
   } finally {
