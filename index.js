@@ -23,6 +23,9 @@ async function run() {
       .db("serviceReviewDB")
       .collection("services");
     const userCollection = client.db("serviceReviewDB").collection("users");
+    const feedbacksCollection = client
+      .db("serviceReviewDB")
+      .collection("feedbacks");
 
     // home services
     app.get("/", async (req, res) => {
@@ -46,6 +49,30 @@ async function run() {
       const query = { _id: ObjectId(id) };
       const service = await serviceCollection.findOne(query);
       res.send(service);
+    });
+
+    //feedbacks
+    app.get("/feedbacks", async (req, res) => {
+      let query = {};
+      if (req.query.userEmail) {
+        query = {
+          userEmail: req.query.userEmail,
+        };
+      }
+      if (req.query.productId) {
+        query = {
+          productId: req.query.productId,
+        };
+      }
+      const cursor = feedbacksCollection.find(query);
+      const feedbacks = await cursor.toArray();
+      res.send(feedbacks);
+    });
+
+    app.post("/feedbacks", async (req, res) => {
+      const order = req.body;
+      const result = await feedbacksCollection.insertOne(order);
+      res.send(result);
     });
   } finally {
   }
