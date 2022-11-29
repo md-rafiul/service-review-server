@@ -110,6 +110,18 @@ async function run() {
       const feedbacks = await cursor.toArray();
       res.send(feedbacks);
     });
+    app.get("/feedbacks-all", async (req, res) => {
+      let query = {};
+
+      if (req.query.productId) {
+        query = {
+          productId: req.query.productId,
+        };
+      }
+      const cursor = feedbacksCollection.find(query);
+      const feedbacks = await cursor.toArray();
+      res.send(feedbacks);
+    });
 
     app.post("/feedbacks", async (req, res) => {
       const feedback = req.body;
