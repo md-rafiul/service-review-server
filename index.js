@@ -79,6 +79,12 @@ async function run() {
       res.send(service);
     });
 
+    app.post("/services", async (req, res) => {
+      const service = req.body;
+      const result = await serviceCollection.insertOne(service);
+      res.send(result);
+    });
+
     //feedbacks
     app.get("/feedbacks", varifyJWT, async (req, res) => {
       // console.log(req.url.split("=")[1]);
@@ -106,8 +112,8 @@ async function run() {
     });
 
     app.post("/feedbacks", async (req, res) => {
-      const order = req.body;
-      const result = await feedbacksCollection.insertOne(order);
+      const feedback = req.body;
+      const result = await feedbacksCollection.insertOne(feedback);
       res.send(result);
     });
 
@@ -116,6 +122,19 @@ async function run() {
       console.log(id);
       const query = { _id: ObjectId(id) };
       const result = await feedbacksCollection.deleteOne(query);
+      res.send(result);
+    });
+
+    app.patch("/feedbacks/:id", async (req, res) => {
+      const id = req.params.id;
+      const status = req.body.status;
+      const query = { _id: ObjectId(id) };
+      const updatedDoc = {
+        $set: {
+          status,
+        },
+      };
+      const result = await feedbacksCollection.updateOne(query, updatedDoc);
       res.send(result);
     });
   } finally {
